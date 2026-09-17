@@ -1,0 +1,18 @@
+{
+  "id": "chatcmpl-test",
+  "model": "qwen3-vl-flash",
+  "choices": [
+    {
+      "message": {
+        "role": "assistant",
+        "content": "{\"summary\":\"课程介绍需求验证方法。\",\"chapters\":[{\"id\":\"chapter_01\",\"title\":\"需求验证\",\"summary\":\"通过行为验证需求。\",\"start_ms\":0,\"end_ms\":4000}],\"insights\":[{\"id\":\"insight_01\",\"title\":\"用行为验证需求\",\"explanation\":\"行为证据比口头表达更可靠。\",\"start_ms\":0,\"end_ms\":4000,\"transcript_evidence\":\"观察用户实际行为。\",\"visual_evidence\":\"画面展示行为数据。\",\"evidence_types\":[\"transcript\",\"visual\"],\"confidence\":0.9,\"remix_reason\":\"观点独立完整。\"}]}"
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1054,
+    "completion_tokens": 126,
+    "total_tokens": 1180,
+    "prompt_tokens_details": {"video_tokens": 1026, "text_tokens": 28}
+  }
+}
