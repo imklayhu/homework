@@ -1,0 +1,11 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><style>
+*{box-sizing:border-box}body{margin:0;width:1280px;height:720px;background:#101412;color:#dfe8e3;font-family:ui-monospace,"PingFang SC",monospace}main{height:100%;padding:52px 64px}header{color:#67d39a;font-size:24px}.window{margin-top:38px;border:1px solid #405047;padding:34px;min-height:500px}.label{color:#8ba097;font-size:20px}h1{font-size:42px;line-height:1.25;letter-spacing:0}.code{margin-top:38px;color:#aebdb5;font-size:25px;white-space:pre-line;line-height:1.6}</style><main><header>terminal · api-performance-lab</header><div class="window"><div class="label" id="index"></div><h1 id="title"></h1><div class="code" id="code"></div></div></main><script>
+const slides=[
+["STEP 01","建立性能基线","$ benchmark --runs 10\np50 800ms   p95 1.4s"],
+["STEP 02","沿请求链路查看 Trace","gateway 20ms\nauth 30ms\ndatabase 700ms"],
+["STEP 03","检查数据库查询计划","Seq Scan on orders\nFilter: tenant_id + created_at"],
+["STEP 04","先写性能回归测试","expect(p95).toBeLessThan(200)"],
+["STEP 05","添加符合查询模式的组合索引","CREATE INDEX ON orders\n(tenant_id, created_at DESC);"],
+["STEP 06","在相同条件重新验证","p50 90ms   p95 140ms\nresult order: PASS"],
+["DONE","一次只改变一个因素","reproduce → trace → test → fix → verify"]];
+const s=slides[Number(new URLSearchParams(location.search).get("slide")||0)]||slides[0];index.textContent=s[0];title.textContent=s[1];code.textContent=s[2];</script></html>

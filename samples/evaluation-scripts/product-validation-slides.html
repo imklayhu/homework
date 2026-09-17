@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; width: 1280px; height: 720px; overflow: hidden; background: #f4f6f5; color: #18211d; font-family: "PingFang SC", sans-serif; }
+  main { height: 100%; border-left: 18px solid #1b6b4a; padding: 68px 72px; display: flex; flex-direction: column; }
+  header { font-size: 28px; font-weight: 650; }
+  section { flex: 1; display: grid; place-content: center; text-align: center; }
+  small { color: #1b6b4a; font: 650 22px ui-monospace, monospace; }
+  h1 { margin: 20px 0 0; max-width: 1040px; font-size: 66px; line-height: 1.16; letter-spacing: 0; }
+  footer { color: #5d6b64; font-size: 20px; }
+</style>
+<main>
+  <header>产品需求验证 · 教学样本</header>
+  <section><small id="index"></small><h1 id="title"></h1></section>
+  <footer>Framewise evaluation fixture</footer>
+</main>
+<script>
+  const slides = [
+    ["01", "为什么先验证问题"],
+    ["02", "观察行为证据"],
+    ["03", "记录场景、频率与代价"],
+    ["04", "运行最小实验"],
+    ["05", "提前设定成功标准"],
+    ["06", "三类证据互相校验"],
+    ["07", "先验证问题，再验证方案"],
+  ];
+  const current = slides[Number(new URLSearchParams(location.search).get("slide") ?? 0)] ?? slides[0];
+  document.querySelector("#index").textContent = current[0];
+  document.querySelector("#title").textContent = current[1];
+</script>
+</html>

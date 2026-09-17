@@ -16,6 +16,8 @@
 | 原工作空间 | 200 | 14 | 没有 Qwen VL 和批量文件 ASR；`qwen3.8-flash` 已实测可理解视频 |
 | ON_DEMAND | 200 | 253 | 补齐 `qwen3-vl-flash`、`qwen3-vl-plus` 和非实时 ASR 候选 |
 
+模型列表可见不等于推理账号当前可用。收尾评测期间，ON_DEMAND 推理请求返回 HTTP 400 / `Arrearage`；应用因此自动回退到原工作空间的 `qwen3.8-flash`。本文不记录两组 Base URL 或任何密钥。
+
 ### 原工作空间返回的模型
 
 ```text
@@ -62,15 +64,14 @@ wan2.7-image-pro
 - 本次探针使用 770 video tokens、68 text tokens；
 - 说明当前账号的 `qwen3.8-flash` 确实开放了视频理解，不需要模型名称中包含 `vl`。
 
-因此 MVP 推荐：
+因此 MVP 的运行时路由为：
 
 ```text
-VIDEO_UNDERSTANDING_MODEL=qwen3-vl-flash
-INSIGHT_MODEL=qwen3-vl-flash
-FALLBACK_VIDEO_MODEL=qwen3-vl-plus
+主通道：ON_DEMAND / qwen3-vl-flash
+端点异常回退：原工作空间 / qwen3.8-flash
 ```
 
-ON_DEMAND 的 `qwen3-vl-flash` 也已完成真实公网 MP4 探针：HTTP 200，正确描述画面并返回 `00:03` 时间点；本次使用 1,026 video tokens、28 text input tokens 和 43 completion tokens。这证明它可作为主链路模型。原工作空间的 `qwen3.8-flash` 保留为端点或权限异常时的备选。
+ON_DEMAND 的 `qwen3-vl-flash` 曾完成真实公网 MP4 探针：HTTP 200，正确描述画面并返回 `00:03` 时间点；本次使用 1,026 video tokens、28 text input tokens 和 43 completion tokens。这证明模型能力满足需求，但不代表账号余额持续可用。当前正式评测实际由回退通道 `qwen3.8-flash` 完成。
 
 ## ASR 缺口与替代方式
 
@@ -105,20 +106,19 @@ ON_DEMAND 的 `qwen3-vl-flash` 也已完成真实公网 MP4 探针：HTTP 200，
 - 优点：已经出现在 ON_DEMAND 列表，托管调用链简单；
 - 缺点：时间戳粒度未确认，不能把精确切点建立在未经实测的能力上。
 
-## 最终建议
+## 最终实现
 
-第一版先使用：
+当前代码采用：
 
 ```text
 视频理解与观点分析：ON_DEMAND / qwen3-vl-flash
-低置信度兜底：ON_DEMAND / qwen3-vl-plus
-可选转写：ON_DEMAND / qwen3-asr-flash-2026-02-10
-候选片段时间：qwen3-vl-flash 生成 + 首尾缓冲 + 用户预览确认
-端点异常备选：原工作空间 / qwen3.8-flash
+供应商错误回退：原工作空间 / qwen3.8-flash
+可选转写：暂不启用
+候选片段时间：实际执行的视频理解模型生成 + 首尾缓冲 + 用户预览确认
 Remix：FFmpeg
 ```
 
-如果第一天真实教育视频测试发现切点明显不稳定，再增加本地 `faster-whisper`。不要在开发开始前为了理论上的时间戳精度阻塞主链路。
+3 条不同长视频样本均未显示需要 ASR 才能修正的明显断句，因此不扩展本地 Whisper。自动回退仅处理模型供应商错误，不吞掉业务校验错误。
 
 ## 价格参考
 
@@ -128,7 +128,7 @@ Remix：FFmpeg
 - 输出：约 ¥2.7 / 百万 Token；
 - 新用户额度：100 万 Token（以控制台实际显示为准）。
 
-本次短视频探针约 1,179 总 Token，因此单次探针成本远低于 1 分钱。实际 10–15 分钟视频应以接口返回的 usage 做实测，不用文件大小直接推算 Token。
+本次短视频探针约 1,179 总 Token，因此单次探针成本远低于 1 分钱。3 条 3:48–3:59 样本的长视频实测为 ¥0.1169–¥0.1225/条，平均约 ¥0.120；5 次有效运行合计约 ¥0.600。更长视频仍应以接口返回的 usage 做实测，不用文件大小直接推算 Token。
 
 官方参考：
 
