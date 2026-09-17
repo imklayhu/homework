@@ -1,4 +1,4 @@
-.PHONY: install dev-api dev-web test-api test-web lint-web verify
+.PHONY: install dev-api dev-web test-api test-web test-e2e lint-web verify
 
 install:
 	cd apps/api && uv sync --python 3.12
@@ -16,8 +16,12 @@ test-api:
 test-web:
 	cd apps/web && npm test -- --run
 
+test-e2e:
+	cd apps/web && npm run test:e2e
+
 lint-web:
 	cd apps/web && npm run lint
 
-verify: test-api lint-web
+verify: test-api test-web lint-web
 	cd apps/web && npm run build
+	$(MAKE) test-e2e

@@ -1,0 +1,76 @@
+{
+  "summary": "本节通过问题拆解、证据验证和结构化复盘，展示如何把复杂知识转化为可以执行和传播的教学观点。",
+  "chapters": [
+    {
+      "id": "chapter-1",
+      "title": "提出问题",
+      "start_ms": 0,
+      "end_ms": 1200,
+      "summary": "明确课程要解决的核心问题。"
+    },
+    {
+      "id": "chapter-2",
+      "title": "拆解方法",
+      "start_ms": 1200,
+      "end_ms": 2700,
+      "summary": "用可观察的证据拆解解决过程。"
+    },
+    {
+      "id": "chapter-3",
+      "title": "形成结论",
+      "start_ms": 2700,
+      "end_ms": 4000,
+      "summary": "把分析收敛为可复用的行动建议。"
+    }
+  ],
+  "insights": [
+    {
+      "id": "insight-1",
+      "title": "先定义可验证的问题",
+      "explanation": "明确成功条件后，分析过程才能围绕证据展开。",
+      "start_ms": 100,
+      "end_ms": 1000,
+      "transcript_evidence": "先确定我们真正需要回答的问题。",
+      "visual_evidence": "画面出现问题定义标题。",
+      "evidence_types": ["transcript", "visual"],
+      "confidence": 0.94,
+      "remix_reason": "适合作为短片开场。"
+    },
+    {
+      "id": "insight-2",
+      "title": "证据需要回到原始内容",
+      "explanation": "观点只有能定位到原视频，用户才可以判断它是否可信。",
+      "start_ms": 1000,
+      "end_ms": 1900,
+      "transcript_evidence": "每个判断都要能够回到原始证据。",
+      "visual_evidence": "讲者指向证据列表。",
+      "evidence_types": ["transcript", "visual"],
+      "confidence": 0.91,
+      "remix_reason": "体现产品的证据链价值。"
+    },
+    {
+      "id": "insight-3",
+      "title": "结构化结果降低复用成本",
+      "explanation": "章节、观点和时间范围让内容可以被检索、重排和再次传播。",
+      "start_ms": 1900,
+      "end_ms": 2900,
+      "transcript_evidence": "结构化以后，内容才能被重新组合。",
+      "visual_evidence": "画面展示章节到观点的结构。",
+      "evidence_types": ["transcript", "visual"],
+      "confidence": 0.89,
+      "remix_reason": "适合作为方案核心说明。"
+    },
+    {
+      "id": "insight-4",
+      "title": "人工确认是可靠交付的一部分",
+      "explanation": "模型提供候选切点，用户预览和排序完成最终判断。",
+      "start_ms": 2900,
+      "end_ms": 3900,
+      "transcript_evidence": "最后一步仍然需要人的确认。",
+      "visual_evidence": "画面展示片段排序与预览。",
+      "evidence_types": ["transcript", "visual"],
+      "confidence": 0.87,
+      "remix_reason": "清晰表达产品边界。"
+    }
+  ]
+}

@@ -15,6 +15,7 @@ node_modules/
 coverage/
 playwright-report/
 test-results/
+output/
 
 # OS and editor files
 .DS_Store
