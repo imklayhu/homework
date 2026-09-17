@@ -29,6 +29,7 @@ class Settings(BaseSettings):
 
     video_understanding_model: str = "qwen3-vl-flash"
     fallback_video_model: str = "qwen3-vl-plus"
+    workspace_video_model: str = "qwen3.8-flash"
     transcription_model: str = "qwen3-asr-flash-2026-02-10"
     enable_asr: bool = False
     demo_mode: bool = False

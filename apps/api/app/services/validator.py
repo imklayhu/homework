@@ -34,6 +34,13 @@ def validate_and_normalize(
             raise AppError("INVALID_MODEL_OUTPUT", "模型返回了无效的时间范围。", 502)
 
     for insight in result.insights:
+        insight_duration_ms = insight.end_ms - insight.start_ms
+        if insight_duration_ms < 5_000 or insight_duration_ms > 120_000:
+            raise AppError(
+                "INVALID_MODEL_OUTPUT",
+                "模型返回的观点片段时长不符合要求。",
+                502,
+            )
         start_ms, end_ms = normalize_range(
             insight.start_ms, insight.end_ms, duration_ms, padding_ms
         )

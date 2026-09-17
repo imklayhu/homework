@@ -21,6 +21,49 @@ class AnalysisAdapter(Protocol):
         raise NotImplementedError
 
 
+FALLBACK_ERROR_CODES = {
+    "MODEL_AUTH_FAILED",
+    "MODEL_REQUEST_FAILED",
+    "MODEL_TIMEOUT",
+    "MODEL_UNAVAILABLE",
+    "INVALID_MODEL_OUTPUT",
+}
+
+
+class FallbackAnalysisAdapter:
+    def __init__(self, primary: AnalysisAdapter, secondary: AnalysisAdapter) -> None:
+        self.primary = primary
+        self.secondary = secondary
+
+    async def analyze(self, video_url: str, duration_ms: int) -> ModelAnalysisResult:
+        try:
+            return await self.primary.analyze(video_url, duration_ms)
+        except AppError as exc:
+            if exc.code not in FALLBACK_ERROR_CODES:
+                raise
+            return await self.secondary.analyze(video_url, duration_ms)
+
+
+def build_analysis_adapter(settings: Settings) -> AnalysisAdapter | None:
+    primary: AnalysisAdapter | None = None
+    secondary: AnalysisAdapter | None = None
+    if settings.on_demand_api_key is not None and settings.on_demand_base_url:
+        primary = BailianVideoAdapter(
+            settings.on_demand_base_url,
+            settings.on_demand_api_key.get_secret_value(),
+            settings.video_understanding_model,
+        )
+    if settings.bailian_api_key is not None and settings.bailian_base_url:
+        secondary = BailianVideoAdapter(
+            settings.bailian_base_url,
+            settings.bailian_api_key.get_secret_value(),
+            settings.workspace_video_model,
+        )
+    if primary is not None and secondary is not None:
+        return FallbackAnalysisAdapter(primary, secondary)
+    return primary or secondary
+
+
 def video_data_url(path: Path, mime_type: str) -> str:
     encoded = base64.b64encode(path.read_bytes()).decode("ascii")
     return f"data:{mime_type};base64,{encoded}"
@@ -106,7 +149,8 @@ async def run_analysis(
 
 
 async def execute_analysis_job(job_id: str, settings: Settings) -> None:
-    if settings.on_demand_api_key is None or not settings.on_demand_base_url:
+    adapter = build_analysis_adapter(settings)
+    if adapter is None:
         with Session(engine) as session:
             job = session.get(AnalysisJob, job_id)
             if job is not None:
@@ -118,10 +162,5 @@ async def execute_analysis_job(job_id: str, settings: Settings) -> None:
                 session.add(job)
                 session.commit()
         return
-    adapter = BailianVideoAdapter(
-        settings.on_demand_base_url,
-        settings.on_demand_api_key.get_secret_value(),
-        settings.video_understanding_model,
-    )
     with Session(engine) as session:
         await run_analysis(job_id, session, settings.data_dir, adapter)

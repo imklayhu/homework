@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import StrEnum
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -65,7 +65,7 @@ class AnalysisJobRead(BaseModel):
     current_stage: JobStatus
     error_code: str | None
     error_message: str | None
-    provider_usage: dict[str, int] | None
+    provider_usage: dict[str, Any] | None
     estimated_cost: float | None
     created_at: datetime
     updated_at: datetime

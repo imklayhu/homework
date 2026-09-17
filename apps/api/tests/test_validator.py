@@ -41,3 +41,15 @@ def test_validator_rejects_duplicate_ids() -> None:
     data["insights"].append(data["insights"][0])
     with pytest.raises(AppError, match="INVALID_MODEL_OUTPUT"):
         validate_and_normalize(AnalysisPayload.model_validate(data), duration_ms=10_000)
+
+
+@pytest.mark.parametrize("start_ms,end_ms", [(1_000, 4_000), (1_000, 125_000)])
+def test_validator_rejects_insights_outside_remix_duration_bounds(
+    start_ms: int, end_ms: int
+) -> None:
+    data = payload().model_dump()
+    data["insights"][0]["start_ms"] = start_ms
+    data["insights"][0]["end_ms"] = end_ms
+
+    with pytest.raises(AppError, match="INVALID_MODEL_OUTPUT"):
+        validate_and_normalize(AnalysisPayload.model_validate(data), duration_ms=130_000)

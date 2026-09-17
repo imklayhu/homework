@@ -52,7 +52,7 @@ export interface AnalysisJob {
   current_stage: JobStatus;
   error_code: string | null;
   error_message: string | null;
-  provider_usage: Record<string, number> | null;
+  provider_usage: Record<string, unknown> | null;
   estimated_cost: number | null;
   created_at: string;
   updated_at: string;
