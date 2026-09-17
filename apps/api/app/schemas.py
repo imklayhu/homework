@@ -84,6 +84,10 @@ class RemixStatus(StrEnum):
     FAILED = "failed"
 
 
+class RemixCreate(BaseModel):
+    insight_ids: list[str] = Field(min_length=1, max_length=8)
+
+
 class RemixJobRead(BaseModel):
     id: str
     video_id: str

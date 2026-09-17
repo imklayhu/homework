@@ -9,6 +9,7 @@ from app.db import init_db
 from app.errors import AppError, app_error_handler
 from app.routes.health import router as health_router
 from app.routes.jobs import router as jobs_router
+from app.routes.remixes import router as remixes_router
 from app.routes.videos import router as videos_router
 
 
@@ -30,5 +31,6 @@ app.add_middleware(
 )
 app.include_router(health_router)
 app.include_router(jobs_router)
+app.include_router(remixes_router)
 app.include_router(videos_router)
 app.add_exception_handler(AppError, app_error_handler)
