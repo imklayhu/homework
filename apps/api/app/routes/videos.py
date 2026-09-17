@@ -2,7 +2,7 @@ import shutil
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, File, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, UploadFile, status
 from fastapi.responses import FileResponse
 from sqlmodel import Session
 
@@ -12,6 +12,7 @@ from app.errors import AppError
 from app.models import AnalysisJob, Video
 from app.schemas import JobStatus, UploadAccepted
 from app.services.media import ALLOWED_MIME_TYPES, probe_video, validate_media
+from app.services.analysis import execute_analysis_job
 
 
 router = APIRouter(prefix="/api", tags=["videos"])
@@ -19,6 +20,7 @@ router = APIRouter(prefix="/api", tags=["videos"])
 
 @router.post("/videos", response_model=UploadAccepted, status_code=status.HTTP_202_ACCEPTED)
 def upload_video(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     session: Session = Depends(get_session),
     settings: Settings = Depends(get_settings),
@@ -71,6 +73,8 @@ def upload_video(
         session.add(job)
         session.commit()
         session.refresh(job)
+        if settings.on_demand_api_key is not None and settings.on_demand_base_url:
+            background_tasks.add_task(execute_analysis_job, job.id, settings)
         return UploadAccepted(video_id=video_id, job_id=job.id, status=JobStatus.UPLOADED)
     except Exception:
         temp_path.unlink(missing_ok=True)

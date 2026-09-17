@@ -32,6 +32,8 @@ async def test_analyze_sends_video_and_parses_schema() -> None:
 
     content = captured["messages"][1]["content"]
     assert content[0]["type"] == "video_url"
+    assert captured["response_format"]["type"] == "json_schema"
+    assert captured["response_format"]["json_schema"]["strict"] is True
     assert result.payload.insights[0].id == "insight_01"
     assert result.usage["total_tokens"] == 1180
     assert result.prompt_version == "qwen-video-v1"

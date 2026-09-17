@@ -26,6 +26,8 @@ def make_client(tmp_path: Path) -> tuple[TestClient, Session]:
         database_url="sqlite://",
         min_duration_seconds=1,
         max_duration_seconds=10,
+        on_demand_api_key=None,
+        on_demand_base_url=None,
     )
     app.dependency_overrides[get_session] = lambda: session
     app.dependency_overrides[get_settings] = lambda: settings

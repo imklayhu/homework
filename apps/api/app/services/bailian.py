@@ -49,7 +49,14 @@ class BailianVideoAdapter:
                 },
             ],
             "temperature": 0.1,
-            "response_format": {"type": "json_object"},
+            "response_format": {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "video_analysis",
+                    "strict": True,
+                    "schema": AnalysisPayload.model_json_schema(),
+                },
+            },
         }
         data = await self._post_with_retry(request)
         try:
