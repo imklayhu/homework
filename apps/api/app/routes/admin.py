@@ -7,6 +7,7 @@ from app.config import Settings, get_settings
 from app.db import get_session
 from app.errors import AppError
 from app.models import AnalyticsEvent
+from app.services.analytics import build_metrics
 from app.services.admin import make_session, verify_password, verify_session
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -39,8 +40,10 @@ def event(request: Request, name: str, properties: dict | None = None, session: 
     session.commit()
 
 @router.get("/metrics")
-def metrics(_: None = Depends(require_admin), session: Session = Depends(get_session)):
+def metrics(days: int = 30, _: None = Depends(require_admin), session: Session = Depends(get_session)):
     since = datetime.now(UTC) - timedelta(days=30)
     rows = session.exec(select(AnalyticsEvent.name, func.count(AnalyticsEvent.id)).where(AnalyticsEvent.created_at >= since).group_by(AnalyticsEvent.name)).all()
     counts = {name: count for name, count in rows}
-    return {"window_days": 30, "total_events": sum(counts.values()), "events": counts}
+    result = build_metrics(session, days)
+    result["window_days"] = max(1, min(days, 90))
+    return result

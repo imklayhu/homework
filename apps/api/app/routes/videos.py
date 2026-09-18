@@ -13,6 +13,7 @@ from app.models import AnalysisJob, Video
 from app.schemas import JobStatus, UploadAccepted
 from app.services.media import ALLOWED_MIME_TYPES, probe_video, validate_media
 from app.services.analysis import execute_analysis_job
+from app.services.analytics import record_event
 
 
 router = APIRouter(prefix="/api", tags=["videos"])
@@ -43,6 +44,8 @@ def register_uploaded_video(
         session.add(job)
         session.commit()
         session.refresh(job)
+        record_event(session, "video_upload_completed", {"video_id": video_id, "job_id": job.id, "size_bytes": video.size_bytes})
+        session.commit()
         if settings.on_demand_api_key is not None and settings.on_demand_base_url:
             background_tasks.add_task(execute_analysis_job, job.id, settings)
         return UploadAccepted(video_id=video_id, job_id=job.id, status=JobStatus.UPLOADED)

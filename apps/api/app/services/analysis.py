@@ -14,6 +14,7 @@ from app.schemas import AnalysisPayload, JobStatus
 from app.services.bailian import ModelAnalysisResult
 from app.services.bailian import BailianVideoAdapter
 from app.services.capacity import job_capacity
+from app.services.analytics import record_event
 from app.services.cost import Pricing, estimate_cost
 from app.services.media import create_analysis_proxy
 from app.services.validator import validate_and_normalize
@@ -77,6 +78,7 @@ def update_stage(session: Session, job: AnalysisJob, status: JobStatus) -> None:
     job.current_stage = status.value
     job.updated_at = utc_now()
     session.add(job)
+    record_event(session, "analysis_stage_changed", {"job_id": job.id, "stage": status.value})
     session.commit()
 
 
