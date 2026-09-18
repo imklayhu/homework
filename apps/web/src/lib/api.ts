@@ -24,7 +24,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export type UploadProgress = { percent: number; uploadedChunks: number; totalChunks: number };
 type UploadResult = { video_id: string; job_id: string; status: string };
-const CHUNK_SIZE = 8 * 1024 * 1024;
+const CHUNK_SIZE = 1 * 1024 * 1024;
 
 const delay = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 

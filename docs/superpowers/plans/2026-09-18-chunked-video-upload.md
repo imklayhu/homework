@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Replace the browser's single large upload request with sequential 8 MiB chunks that work through Cloudflare Tunnel and feed the existing analysis pipeline.
+**Goal:** Replace the browser's single large upload request with sequential 1 MiB chunks that work through Cloudflare Tunnel and feed the existing analysis pipeline.
 
 **Architecture:** A filesystem-backed upload service owns manifests, atomic chunk writes, ordered assembly, and expiry cleanup under `data/tmp/chunk-uploads`. A dedicated FastAPI router exposes init/chunk/complete endpoints and delegates the completed file to the same video-registration logic used by the legacy endpoint. The Web client uploads chunks sequentially with bounded retry and reports confirmed progress to `UploadPanel`.
 
@@ -136,7 +136,7 @@ Expected: failure because `uploadVideoInChunks` is missing.
 
 - [ ] **Step 3: Implement minimal client**
 
-Add `CHUNK_SIZE = 8 * 1024 * 1024`, `sleep`, and:
+Add `CHUNK_SIZE = 1 * 1024 * 1024`, `sleep`, and:
 
 ```typescript
 uploadVideoInChunks(
@@ -232,4 +232,4 @@ Upload a valid file larger than 10 MiB through init/chunk/complete and assert fi
 
 - [ ] **Step 5: Cloudflare acceptance**
 
-Have the user upload the original video through the configured Tunnel URL. Confirm each request remains near 8 MiB and the browser reaches the job page.
+Have the user upload the original video through the configured Tunnel URL. Confirm each request remains near 1 MiB and the browser reaches the job page.

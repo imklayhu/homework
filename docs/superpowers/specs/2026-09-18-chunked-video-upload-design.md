@@ -10,7 +10,7 @@ Framewise 当前通过 Cloudflare Tunnel 暴露 Web 服务。局域网内单请�
 
 ### 包含
 
-- Web 默认使用 8 MiB 固定分片上传。
+- Web 默认使用 1 MiB 固定分片上传，以降低低速上行经 Cloudflare Tunnel 时触发 524 的风险。
 - 分片串行发送，单片失败最多重试 3 次。
 - 显示整体上传百分比和当前分片进度。
 - 服务端初始化、分片写入和完成合并接口。
@@ -40,8 +40,8 @@ Framewise 当前通过 Cloudflare Tunnel 暴露 Web 服务。局域网内单请�
   "filename": "lesson.mp4",
   "content_type": "video/mp4",
   "size_bytes": 104857600,
-  "chunk_size": 8388608,
-  "total_chunks": 13
+  "chunk_size": 1048576,
+  "total_chunks": 100
 }
 ```
 
@@ -57,8 +57,8 @@ Framewise 当前通过 Cloudflare Tunnel 暴露 Web 服务。局域网内单请�
 ```json
 {
   "upload_id": "uuid",
-  "chunk_size": 8388608,
-  "total_chunks": 13
+  "chunk_size": 1048576,
+  "total_chunks": 100
 }
 ```
 
@@ -118,7 +118,7 @@ data/tmp/chunk-uploads/{upload_id}/
 ## 前端流程
 
 1. 沿用现有扩展名、MIME 和 300 MiB 前置校验。
-2. 计算 `total_chunks = ceil(file.size / 8 MiB)` 并初始化会话。
+2. 计算 `total_chunks = ceil(file.size / 1 MiB)` 并初始化会话。
 3. 使用 `File.slice()` 串行上传每个分片。
 4. 每片失败时等待 500 ms、1 s、2 s 后重试，最多共 3 次请求。
 5. 每片成功后按已确认上传字节计算进度。
@@ -168,7 +168,7 @@ data/tmp/chunk-uploads/{upload_id}/
 
 ### Web 自动化测试
 
-- 8 MiB 以上文件被拆成正确数量的分片。
+- 1 MiB 以上文件被拆成正确数量的分片。
 - 分片按顺序上传并在完成后调用 complete。
 - 单片网络失败最多重试 3 次。
 - 上传进度随成功分片更新。
