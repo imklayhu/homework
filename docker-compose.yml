@@ -9,6 +9,8 @@ services:
     volumes:
       - ./data:/app/data
     expose: ["8000"]
+    mem_limit: 768m
+    cpus: 1.75
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
@@ -23,6 +25,8 @@ services:
         NEXT_PUBLIC_API_BASE_URL: ""
     ports:
       - "${FRAMEWISE_BIND_IP:-0.0.0.0}:${FRAMEWISE_PORT:-3015}:3000"
+    mem_limit: 384m
+    cpus: 0.50
     depends_on:
       api:
         condition: service_healthy
