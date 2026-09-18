@@ -12,6 +12,7 @@ from app.routes.jobs import router as jobs_router
 from app.routes.remixes import router as remixes_router
 from app.routes.videos import router as videos_router
 from app.routes.admin import router as admin_router
+from app.routes.uploads import router as uploads_router
 
 
 @asynccontextmanager
@@ -35,4 +36,5 @@ app.include_router(jobs_router)
 app.include_router(remixes_router)
 app.include_router(videos_router)
 app.include_router(admin_router)
+app.include_router(uploads_router)
 app.add_exception_handler(AppError, app_error_handler)

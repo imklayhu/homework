@@ -77,6 +77,20 @@ class UploadAccepted(BaseModel):
     status: JobStatus
 
 
+class ChunkUploadInit(BaseModel):
+    filename: str = Field(min_length=1, max_length=255)
+    content_type: str = Field(min_length=1, max_length=100)
+    size_bytes: int = Field(gt=0)
+    chunk_size: int = Field(gt=0)
+    total_chunks: int = Field(gt=0)
+
+
+class ChunkUploadCreated(BaseModel):
+    upload_id: str
+    chunk_size: int
+    total_chunks: int
+
+
 class RemixStatus(StrEnum):
     QUEUED = "queued"
     RENDERING = "rendering"

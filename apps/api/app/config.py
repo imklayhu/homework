@@ -41,6 +41,8 @@ class Settings(BaseSettings):
     admin_session_secret: SecretStr = SecretStr("change-me-in-production")
 
     max_upload_bytes: int = 300 * 1024 * 1024
+    chunk_upload_size: int = 8 * 1024 * 1024
+    chunk_upload_ttl_seconds: int = 24 * 60 * 60
     min_duration_seconds: int = 180
     max_duration_seconds: int = 900
 
@@ -56,8 +58,12 @@ class Settings(BaseSettings):
     def temp_dir(self) -> Path:
         return self.data_dir / "tmp"
 
+    @property
+    def chunk_uploads_dir(self) -> Path:
+        return self.temp_dir / "chunk-uploads"
+
     def ensure_directories(self) -> None:
-        for directory in (self.uploads_dir, self.remixes_dir, self.temp_dir):
+        for directory in (self.uploads_dir, self.remixes_dir, self.temp_dir, self.chunk_uploads_dir):
             directory.mkdir(parents=True, exist_ok=True)
 
 
