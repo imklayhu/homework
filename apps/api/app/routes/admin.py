@@ -22,6 +22,7 @@ def require_admin(request: Request, settings: Settings = Depends(get_settings)) 
         raise AppError("ADMIN_UNAUTHORIZED", "请先登录管理员账号。", 401)
 
 @router.post("/login")
+@router.post("/authenticate")
 def login(body: LoginBody, response: Response, settings: Settings = Depends(get_settings)):
     configured = settings.admin_password.get_secret_value() if settings.admin_password else ""
     if body.username != settings.admin_username or not verify_password(body.password, configured):

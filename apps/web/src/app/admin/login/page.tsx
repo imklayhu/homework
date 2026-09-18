@@ -11,7 +11,7 @@ export default function AdminLogin() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    const response = await fetch(`${API_BASE_URL}/api/admin/login`, {
+    const response = await fetch(`${API_BASE_URL}/api/admin/authenticate`, {
       method: "POST",
       credentials: "include",
       headers: { "content-type": "application/json" },

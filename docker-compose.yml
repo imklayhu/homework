@@ -23,8 +23,8 @@ services:
       dockerfile: apps/web/Dockerfile
       args:
         NEXT_PUBLIC_API_BASE_URL: ""
-        NEXT_PUBLIC_DEMO_ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
-        NEXT_PUBLIC_DEMO_ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+        NEXT_PUBLIC_DEMO_ADMIN_USERNAME: ${NEXT_PUBLIC_DEMO_ADMIN_USERNAME:-framewise-demo}
+        NEXT_PUBLIC_DEMO_ADMIN_PASSWORD: ${NEXT_PUBLIC_DEMO_ADMIN_PASSWORD:-}
     ports:
       - "${FRAMEWISE_BIND_IP:-0.0.0.0}:${FRAMEWISE_PORT:-3015}:3000"
     mem_limit: 384m
