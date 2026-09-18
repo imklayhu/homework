@@ -1,0 +1,5 @@
+"use client";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { API_BASE_URL } from "@/lib/api";
+export default function Dashboard() { const router = useRouter(); const [metrics, setMetrics] = useState<{total_events:number;events:Record<string,number>}|null>(null); useEffect(() => { fetch(`${API_BASE_URL}/api/admin/metrics`, { credentials: "include" }).then(async r => { if (r.status === 401) router.replace("/admin/login"); else setMetrics(await r.json()); }); }, [router]); return <main className="home-shell"><header className="topbar"><span className="brand">Framewise Admin</span><button onClick={async()=>{await fetch(`${API_BASE_URL}/api/admin/logout`,{method:"POST",credentials:"include"});router.replace("/admin/login")}}>退出</button></header><section className="workspace-shell"><p className="eyebrow">LAST 30 DAYS</p><h1>数据看板</h1><div className="workflow-band"><div><strong>{metrics?.total_events ?? "—"}</strong><p>事件总量</p></div>{Object.entries(metrics?.events ?? {}).slice(0,5).map(([name,count])=><div key={name}><strong>{count}</strong><p>{name}</p></div>)}</div></section></main>; }
