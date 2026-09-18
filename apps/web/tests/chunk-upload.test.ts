@@ -48,4 +48,28 @@ describe("chunked video upload", () => {
     await uploadVideo(new File(["abcd"], "lesson.mp4", { type: "video/mp4" }), undefined, { chunkSize: 4, retryDelaysMs: [0, 0] });
     expect(chunkAttempts).toBe(2);
   });
+
+  it("uploads up to three chunks concurrently by default", async () => {
+    const startedChunks: number[] = [];
+    const releaseChunk: Array<() => void> = [];
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (url.endsWith("/init")) return { ok: true, json: async () => ({ upload_id: "upload-1" }) } as Response;
+      if (url.endsWith("/complete")) return { ok: true, json: async () => ({ video_id: "v", job_id: "j", status: "uploaded" }) } as Response;
+      const index = Number(url.match(/chunks\/(\d+)$/)?.[1]);
+      startedChunks.push(index);
+      await new Promise<void>((resolve) => releaseChunk[index] = resolve);
+      return { ok: true, status: 204 } as Response;
+    }));
+
+    const upload = uploadVideo(new File(["abcdefgh"], "lesson.mp4", { type: "video/mp4" }), undefined, { chunkSize: 2, retryDelaysMs: [] });
+    await vi.waitFor(() => expect(startedChunks).toEqual([0, 1, 2]));
+    expect(startedChunks).not.toContain(3);
+
+    releaseChunk[0]();
+    await vi.waitFor(() => expect(startedChunks).toEqual([0, 1, 2, 3]));
+    releaseChunk[1]();
+    releaseChunk[2]();
+    releaseChunk[3]();
+    await upload;
+  });
 });

@@ -25,6 +25,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export type UploadProgress = { percent: number; uploadedChunks: number; totalChunks: number };
 type UploadResult = { video_id: string; job_id: string; status: string };
 const CHUNK_SIZE = 1 * 1024 * 1024;
+const UPLOAD_CONCURRENCY = 3;
 
 const delay = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
@@ -57,10 +58,18 @@ export async function uploadVideo(
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ filename: file.name, content_type: file.type, size_bytes: file.size, chunk_size: chunkSize, total_chunks: totalChunks }),
   });
-  for (let index = 0; index < totalChunks; index += 1) {
-    await putChunk(`/api/uploads/${created.upload_id}/chunks/${index}`, file.slice(index * chunkSize, Math.min(file.size, (index + 1) * chunkSize)), retryDelaysMs);
-    onProgress?.({ percent: Math.round(((index + 1) / totalChunks) * 100), uploadedChunks: index + 1, totalChunks });
-  }
+  let nextIndex = 0;
+  let uploadedChunks = 0;
+  const uploadNext = async () => {
+    while (nextIndex < totalChunks) {
+      const index = nextIndex;
+      nextIndex += 1;
+      await putChunk(`/api/uploads/${created.upload_id}/chunks/${index}`, file.slice(index * chunkSize, Math.min(file.size, (index + 1) * chunkSize)), retryDelaysMs);
+      uploadedChunks += 1;
+      onProgress?.({ percent: Math.round((uploadedChunks / totalChunks) * 100), uploadedChunks, totalChunks });
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(UPLOAD_CONCURRENCY, totalChunks) }, uploadNext));
   return request<UploadResult>(`/api/uploads/${created.upload_id}/complete`, { method: "POST" });
 }
 

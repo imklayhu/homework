@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Replace the browser's single large upload request with sequential 1 MiB chunks that work through Cloudflare Tunnel and feed the existing analysis pipeline.
+**Goal:** Replace the browser's single large upload request with up to three concurrent 1 MiB chunks that work through Cloudflare Tunnel and feed the existing analysis pipeline.
 
-**Architecture:** A filesystem-backed upload service owns manifests, atomic chunk writes, ordered assembly, and expiry cleanup under `data/tmp/chunk-uploads`. A dedicated FastAPI router exposes init/chunk/complete endpoints and delegates the completed file to the same video-registration logic used by the legacy endpoint. The Web client uploads chunks sequentially with bounded retry and reports confirmed progress to `UploadPanel`.
+**Architecture:** A filesystem-backed upload service owns manifests, atomic chunk writes, ordered assembly, and expiry cleanup under `data/tmp/chunk-uploads`. A dedicated FastAPI router exposes init/chunk/complete endpoints and delegates the completed file to the same video-registration logic used by the legacy endpoint. The Web client uses three workers to upload chunks concurrently with bounded per-chunk retry and reports confirmed progress to `UploadPanel`.
 
 **Tech Stack:** FastAPI, Pydantic, SQLModel, pathlib, Next.js 16, React 19, TypeScript, Vitest, pytest.
 
@@ -19,7 +19,7 @@
 - Modify `apps/api/app/routes/videos.py`: extract reusable completed-file registration function.
 - Modify `apps/api/app/main.py`: register uploads router.
 - Modify `apps/api/app/config.py`: chunk size and upload-expiry settings.
-- Modify `apps/web/src/lib/api.ts`: sequential chunk client, retry, progress callback.
+- Modify `apps/web/src/lib/api.ts`: three-worker chunk client, retry, progress callback.
 - Modify `apps/web/src/components/UploadPanel.tsx`: receive and display confirmed progress.
 - Modify `apps/web/src/app/page.tsx`: connect progress callback and navigate after completion.
 - Create `apps/web/tests/chunk-upload.test.ts`: slicing, request order and retry tests.
