@@ -13,6 +13,7 @@ from app.models import AnalysisJob, AnalysisResult, Video, utc_now
 from app.schemas import AnalysisPayload, JobStatus
 from app.services.bailian import ModelAnalysisResult
 from app.services.bailian import BailianVideoAdapter
+from app.services.capacity import job_capacity
 from app.services.cost import Pricing, estimate_cost
 from app.services.media import create_analysis_proxy
 from app.services.validator import validate_and_normalize
@@ -183,18 +184,19 @@ async def run_analysis(
 
 
 async def execute_analysis_job(job_id: str, settings: Settings) -> None:
-    adapter = build_analysis_adapter(settings)
-    if adapter is None:
+    async with job_capacity():
+        adapter = build_analysis_adapter(settings)
+        if adapter is None:
+            with Session(engine) as session:
+                job = session.get(AnalysisJob, job_id)
+                if job is not None:
+                    job.status = JobStatus.FAILED.value
+                    job.current_stage = JobStatus.FAILED.value
+                    job.failed_stage = JobStatus.UPLOADED.value
+                    job.error_code = "MODEL_NOT_CONFIGURED"
+                    job.error_message = "模型服务尚未配置。"
+                    session.add(job)
+                    session.commit()
+            return
         with Session(engine) as session:
-            job = session.get(AnalysisJob, job_id)
-            if job is not None:
-                job.status = JobStatus.FAILED.value
-                job.current_stage = JobStatus.FAILED.value
-                job.failed_stage = JobStatus.UPLOADED.value
-                job.error_code = "MODEL_NOT_CONFIGURED"
-                job.error_message = "模型服务尚未配置。"
-                session.add(job)
-                session.commit()
-        return
-    with Session(engine) as session:
-        await run_analysis(job_id, session, settings.data_dir, adapter)
+            await run_analysis(job_id, session, settings.data_dir, adapter)

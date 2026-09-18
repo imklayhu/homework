@@ -9,6 +9,7 @@ from app.errors import AppError
 from app.models import AnalysisJob, AnalysisResult, RemixJob, Video, utc_now
 from app.schemas import AnalysisPayload, Insight, RemixStatus
 from app.services.media import probe_video
+from app.services.capacity import sync_job_capacity
 from app.db import engine
 
 
@@ -96,5 +97,6 @@ def render_remix(remix_id: str, session: Session, data_dir: Path) -> None:
 
 
 def execute_remix_job(remix_id: str, data_dir: Path) -> None:
-    with Session(engine) as session:
-        render_remix(remix_id, session, data_dir)
+    with sync_job_capacity():
+        with Session(engine) as session:
+            render_remix(remix_id, session, data_dir)
