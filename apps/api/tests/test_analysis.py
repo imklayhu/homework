@@ -187,6 +187,10 @@ def test_job_and_result_endpoints_return_persisted_data(tmp_path: Path) -> None:
     payload = json.loads(MODEL_RESPONSE.read_text())["choices"][0]["message"]["content"]
     job.status = JobStatus.COMPLETED.value
     job.current_stage = JobStatus.COMPLETED.value
+    job.progress_current = 1
+    job.progress_total = 1
+    job.progress_percent = 100
+    job.progress_message = "视频内容理解完成"
     job.provider_usage_json = json.dumps({
         "prompt_tokens": 40_043,
         "prompt_tokens_details": {"video_tokens": 39_206, "text_tokens": 837},
@@ -196,6 +200,7 @@ def test_job_and_result_endpoints_return_persisted_data(tmp_path: Path) -> None:
         job_id=job.id, insights_json=payload, prompt_version="qwen-video-v1",
         model_version="qwen3-vl-flash"
     ))
+    append_job_log(session, job, "视频内容理解完成")
     session.commit()
     app.dependency_overrides[get_session] = lambda: session
     app.dependency_overrides[get_settings] = lambda: Settings(data_dir=tmp_path)
@@ -207,6 +212,8 @@ def test_job_and_result_endpoints_return_persisted_data(tmp_path: Path) -> None:
     assert job_response.status_code == 200
     assert job_response.json()["status"] == "completed"
     assert job_response.json()["provider_usage"]["prompt_tokens_details"]["video_tokens"] == 39_206
+    assert job_response.json()["progress_percent"] == 100
+    assert job_response.json()["logs"][-1]["message"] == "视频内容理解完成"
     assert result_response.status_code == 200
     assert result_response.json()["insights"][0]["id"] == "insight_01"
     app.dependency_overrides.clear()

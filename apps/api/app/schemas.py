@@ -58,6 +58,14 @@ class VideoRead(BaseModel):
     height: int | None
 
 
+class AnalysisJobLogRead(BaseModel):
+    id: str
+    stage: str
+    level: Literal["info", "warning", "error"]
+    message: str
+    created_at: datetime
+
+
 class AnalysisJobRead(BaseModel):
     id: str
     video_id: str
@@ -67,6 +75,11 @@ class AnalysisJobRead(BaseModel):
     error_message: str | None
     provider_usage: dict[str, Any] | None
     estimated_cost: float | None
+    progress_current: int
+    progress_total: int
+    progress_percent: int
+    progress_message: str | None
+    logs: list[AnalysisJobLogRead]
     created_at: datetime
     updated_at: datetime
 
