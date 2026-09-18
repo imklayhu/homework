@@ -15,7 +15,7 @@
 **Files:**
 - Modify: `apps/api/tests/test_analysis.py`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Add this async regression test, reusing the existing fixture model result setup from `test_long_video_uses_model_friendly_segment_duration`:
 
@@ -49,7 +49,7 @@ async def test_tiny_tail_is_merged_into_previous_segment(tmp_path: Path, monkeyp
     assert adapter.calls == 14
 ```
 
-- [ ] **Step 2: Run the focused test and verify RED**
+- [x] **Step 2: Run the focused test and verify RED**
 
 Run:
 
@@ -66,7 +66,7 @@ Expected: failure showing 15 model calls or a final 0.35-second proxy.
 - Modify: `apps/api/app/services/job_progress.py`
 - Modify: `apps/api/tests/test_analysis.py`
 
-- [ ] **Step 1: Add `build_segment_ranges`**
+- [x] **Step 1: Add `build_segment_ranges`**
 
 Create a pure helper equivalent to:
 
@@ -87,11 +87,11 @@ def build_segment_ranges(
     return ranges
 ```
 
-- [ ] **Step 2: Use actual ranges throughout analysis**
+- [x] **Step 2: Use actual ranges throughout analysis**
 
 Change `initialize_progress` to accept `total_segments: int`, use `max(1, total_segments)`, and update its direct test call from `(65_000, 30_000)` to `3`. In `analyze_in_segments`, build `segment_ranges`, initialize progress with `len(segment_ranges)`, iterate over `(start_ms, length_ms)`, and offset merged results with `segment_ranges[index][0]`.
 
-- [ ] **Step 3: Run the focused test and verify GREEN**
+- [x] **Step 3: Run the focused test and verify GREEN**
 
 Run:
 
@@ -101,7 +101,7 @@ cd apps/api && uv run pytest tests/test_analysis.py::test_tiny_tail_is_merged_in
 
 Expected: one passing test.
 
-- [ ] **Step 4: Run the API test suite**
+- [x] **Step 4: Run the API test suite**
 
 Run:
 
@@ -117,18 +117,18 @@ Expected: all tests pass.
 - Modify: remote `/home/deploy/framewise`
 - Modify: remote `/home/klay/docker/stacks/framewise`
 
-- [ ] **Step 1: Commit the implementation**
+- [x] **Step 1: Commit the implementation**
 
 Commit the regression test and minimal implementation on the current branch.
 
-- [ ] **Step 2: Sync source without overwriting remote `.env` or `data`**
+- [x] **Step 2: Sync source without overwriting remote `.env` or `data`**
 
 Use the existing deployment paths and exclude `.env`, `.git`, `data`, caches, and build artifacts.
 
-- [ ] **Step 3: Rebuild and restart both Compose services**
+- [x] **Step 3: Rebuild and restart both Compose services**
 
 Run `docker compose up -d --build` in each remote deployment directory without changing port 3015.
 
-- [ ] **Step 4: Verify deployment**
+- [x] **Step 4: Verify deployment**
 
 Confirm `framewise-api-1` and `framewise-web-1` are running, `/api/health` returns HTTP 200, and the container's `analysis.py` hash matches the local file.
