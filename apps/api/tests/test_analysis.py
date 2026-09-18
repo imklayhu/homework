@@ -9,6 +9,13 @@ from app.errors import AppError
 from app.models import AnalysisJob, AnalysisResult, Video
 from app.schemas import JobStatus
 from app.services.analysis import FallbackAnalysisAdapter, analyze_in_segments, run_analysis
+from app.services.job_progress import (
+    append_job_log,
+    complete_segment,
+    initialize_progress,
+    recent_logs,
+    set_progress_message,
+)
 from app.services.bailian import ModelAnalysisResult
 from app.schemas import AnalysisPayload
 
@@ -44,6 +51,21 @@ class TrackingAdapter:
             raise self.error
         assert self.result is not None
         return self.result
+
+
+def test_progress_service_persists_snapshot_and_limits_recent_logs(tmp_path: Path) -> None:
+    session, job = session_with_job(tmp_path)
+    initialize_progress(session, job, 65_000, 30_000)
+    assert (job.progress_current, job.progress_total, job.progress_percent) == (0, 3, 0)
+    set_progress_message(session, job, "正在生成第 1/3 个分析片段")
+    complete_segment(session, job, 1)
+    assert (job.progress_current, job.progress_total, job.progress_percent) == (1, 3, 33)
+    for index in range(25):
+        append_job_log(session, job, f"日志 {index}")
+    logs = recent_logs(session, job.id)
+    assert len(logs) == 20
+    assert logs[0].message == "日志 5"
+    assert logs[-1].message == "日志 24"
 
 
 @pytest.mark.asyncio
