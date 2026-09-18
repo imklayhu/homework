@@ -73,3 +73,28 @@ async def test_server_error_retries_twice() -> None:
             await adapter.analyze("https://example.com/video.mp4", 4_000)
 
     assert attempts == 3
+
+
+@pytest.mark.asyncio
+async def test_retry_reports_user_friendly_progress_event() -> None:
+    attempts = 0
+    events: list[tuple[str, str]] = []
+    response_data = json.loads((FIXTURE_DIR / "qwen-response.json").read_text())
+
+    def handler(_: httpx.Request) -> httpx.Response:
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            return httpx.Response(503, json={"error": {"message": "unavailable"}})
+        return httpx.Response(200, json=response_data)
+
+    async def on_progress(level: str, message: str) -> None:
+        events.append((level, message))
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        adapter = BailianVideoAdapter(
+            "https://example.invalid/v1", "secret", client=client, sleep=lambda _: None
+        )
+        await adapter.analyze("https://example.com/video.mp4", 4_000, on_progress=on_progress)
+
+    assert events == [("warning", "模型响应较慢，正在进行第 2 次尝试")]

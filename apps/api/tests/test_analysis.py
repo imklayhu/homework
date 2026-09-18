@@ -25,7 +25,7 @@ MODEL_RESPONSE = Path(__file__).parent / "fixtures" / "qwen-response.json"
 
 
 class FakeAdapter:
-    async def analyze(self, video_url: str, duration_ms: int) -> ModelAnalysisResult:
+    async def analyze(self, video_url: str, duration_ms: int, on_progress=None) -> ModelAnalysisResult:
         assert video_url.startswith("data:video/mp4;base64,")
         raw = json.loads(MODEL_RESPONSE.read_text())
         payload = AnalysisPayload.model_validate(json.loads(raw["choices"][0]["message"]["content"]))
@@ -35,7 +35,7 @@ class FakeAdapter:
 
 
 class FailingAdapter:
-    async def analyze(self, video_url: str, duration_ms: int) -> ModelAnalysisResult:
+    async def analyze(self, video_url: str, duration_ms: int, on_progress=None) -> ModelAnalysisResult:
         raise AppError("MODEL_TIMEOUT", "视频分析超时，请重试。", 504)
 
 
@@ -45,7 +45,7 @@ class TrackingAdapter:
         self.error = error
         self.calls = 0
 
-    async def analyze(self, video_url: str, duration_ms: int) -> ModelAnalysisResult:
+    async def analyze(self, video_url: str, duration_ms: int, on_progress=None) -> ModelAnalysisResult:
         self.calls += 1
         if self.error is not None:
             raise self.error
@@ -129,6 +129,9 @@ async def test_run_analysis_persists_completed_result(tmp_path: Path) -> None:
     assert result.model_version == "qwen3-vl-flash"
     assert json.loads(result.insights_json)["insights"][0]["id"] == "insight_01"
     assert job.provider_usage_json is not None
+    messages = [log.message for log in recent_logs(session, job.id)]
+    assert "准备分析视频，共 1 个片段" in messages
+    assert "第 1/1 个片段理解完成" in messages
 
 
 @pytest.mark.asyncio

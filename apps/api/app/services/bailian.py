@@ -1,6 +1,6 @@
 import asyncio
 import json
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any
 
@@ -10,6 +10,9 @@ from pydantic import ValidationError
 from app.errors import AppError
 from app.schemas import AnalysisPayload
 from app.services.prompts import ANALYSIS_PROMPT_VERSION, SYSTEM_PROMPT, build_analysis_prompt
+
+
+ProgressCallback = Callable[[str, str], Awaitable[None]]
 
 
 @dataclass(frozen=True)
@@ -35,7 +38,12 @@ class BailianVideoAdapter:
         self.client = client
         self.sleep = sleep
 
-    async def analyze(self, video_url: str, duration_ms: int) -> ModelAnalysisResult:
+    async def analyze(
+        self,
+        video_url: str,
+        duration_ms: int,
+        on_progress: ProgressCallback | None = None,
+    ) -> ModelAnalysisResult:
         request = {
             "model": self.model,
             "messages": [
@@ -58,7 +66,7 @@ class BailianVideoAdapter:
                 },
             },
         }
-        data = await self._post_with_retry(request)
+        data = await self._post_with_retry(request, on_progress=on_progress)
         try:
             content = data["choices"][0]["message"]["content"]
             payload = AnalysisPayload.model_validate(json.loads(content))
@@ -71,7 +79,11 @@ class BailianVideoAdapter:
             prompt_version=ANALYSIS_PROMPT_VERSION,
         )
 
-    async def _post_with_retry(self, body: dict[str, Any]) -> dict[str, Any]:
+    async def _post_with_retry(
+        self,
+        body: dict[str, Any],
+        on_progress: ProgressCallback | None = None,
+    ) -> dict[str, Any]:
         owns_client = self.client is None
         client = self.client or httpx.AsyncClient(timeout=httpx.Timeout(180, connect=10))
         try:
@@ -85,6 +97,8 @@ class BailianVideoAdapter:
                 except httpx.TimeoutException as exc:
                     if attempt == 2:
                         raise AppError("MODEL_TIMEOUT", "视频分析超时，请重试。", 504) from exc
+                    if on_progress is not None:
+                        await on_progress("warning", f"模型响应较慢，正在进行第 {attempt + 2} 次尝试")
                     await self._sleep(2**attempt)
                     continue
 
@@ -93,6 +107,8 @@ class BailianVideoAdapter:
                 if response.status_code == 429 or response.status_code >= 500:
                     if attempt == 2:
                         raise AppError("MODEL_UNAVAILABLE", "模型服务暂时不可用，请重试。", 503)
+                    if on_progress is not None:
+                        await on_progress("warning", f"模型响应较慢，正在进行第 {attempt + 2} 次尝试")
                     await self._sleep(2**attempt)
                     continue
                 if response.is_error:

@@ -12,7 +12,7 @@ from app.db import engine
 from app.errors import AppError
 from app.models import AnalysisJob, AnalysisResult, Video, utc_now
 from app.schemas import AnalysisPayload, JobStatus
-from app.services.bailian import ModelAnalysisResult
+from app.services.bailian import ModelAnalysisResult, ProgressCallback
 from app.services.bailian import BailianVideoAdapter
 from app.services.capacity import job_capacity
 from app.services.analytics import record_event
@@ -22,7 +22,12 @@ from app.services.validator import validate_and_normalize
 
 
 class AnalysisAdapter(Protocol):
-    async def analyze(self, video_url: str, duration_ms: int) -> ModelAnalysisResult:
+    async def analyze(
+        self,
+        video_url: str,
+        duration_ms: int,
+        on_progress: ProgressCallback | None = None,
+    ) -> ModelAnalysisResult:
         raise NotImplementedError
 
 
@@ -40,13 +45,18 @@ class FallbackAnalysisAdapter:
         self.primary = primary
         self.secondary = secondary
 
-    async def analyze(self, video_url: str, duration_ms: int) -> ModelAnalysisResult:
+    async def analyze(
+        self,
+        video_url: str,
+        duration_ms: int,
+        on_progress: ProgressCallback | None = None,
+    ) -> ModelAnalysisResult:
         try:
-            return await self.primary.analyze(video_url, duration_ms)
+            return await self.primary.analyze(video_url, duration_ms, on_progress=on_progress)
         except AppError as exc:
             if exc.code not in FALLBACK_ERROR_CODES:
                 raise
-            return await self.secondary.analyze(video_url, duration_ms)
+            return await self.secondary.analyze(video_url, duration_ms, on_progress=on_progress)
 
 
 def build_analysis_adapter(settings: Settings) -> AnalysisAdapter | None:
@@ -89,6 +99,8 @@ async def analyze_in_segments(
     data_dir: Path,
     job_id: str,
     adapter: AnalysisAdapter,
+    session: Session | None = None,
+    job: AnalysisJob | None = None,
 ) -> tuple[ModelAnalysisResult, Path]:
     # Keep inline base64 video requests small enough for model gateways to
     # ingest reliably. A three-minute proxy is ~9 MB (12+ MB after base64)
@@ -96,11 +108,30 @@ async def analyze_in_segments(
     segment_ms = 30_000
     results: list[ModelAnalysisResult] = []
     proxies: list[Path] = []
+    if session is not None and job is not None:
+        from app.services.job_progress import initialize_progress
+
+        initialize_progress(session, job, duration_ms, segment_ms)
+
+    async def on_progress(level: str, message: str) -> None:
+        if session is not None and job is not None:
+            from app.services.job_progress import set_progress_message
+
+            set_progress_message(session, job, message, level=level)
+
     try:
         for index, start_ms in enumerate(range(0, duration_ms, segment_ms)):
             length_ms = min(segment_ms, duration_ms - start_ms)
             proxy = data_dir / "tmp" / f"analysis-{job_id}-{index}-{uuid4().hex}.mp4"
             proxies.append(proxy)
+            if session is not None and job is not None:
+                from app.services.job_progress import set_progress_message
+
+                set_progress_message(
+                    session,
+                    job,
+                    f"正在生成第 {index + 1}/{job.progress_total} 个分析片段",
+                )
             # ffmpeg is a blocking subprocess; keep it off the event loop so
             # health checks, job polling, and other requests remain responsive
             # while long videos are being transcoded.
@@ -111,7 +142,23 @@ async def analyze_in_segments(
                 start_ms / 1000,
                 length_ms / 1000,
             )
-            results.append(await adapter.analyze(video_data_url(proxy, "video/mp4"), length_ms))
+            if session is not None and job is not None:
+                set_progress_message(
+                    session,
+                    job,
+                    f"正在理解第 {index + 1}/{job.progress_total} 个片段（{_format_time(start_ms)}–{_format_time(start_ms + length_ms)}）",
+                )
+            results.append(
+                await adapter.analyze(
+                    video_data_url(proxy, "video/mp4"),
+                    length_ms,
+                    on_progress=on_progress,
+                )
+            )
+            if session is not None and job is not None:
+                from app.services.job_progress import complete_segment
+
+                complete_segment(session, job, index + 1)
 
         chapters = []
         insights = []
@@ -127,6 +174,11 @@ async def analyze_in_segments(
     finally:
         for proxy in proxies:
             proxy.unlink(missing_ok=True)
+
+
+def _format_time(milliseconds: int) -> str:
+    total_seconds = max(0, milliseconds // 1000)
+    return f"{total_seconds // 60:02d}:{total_seconds % 60:02d}"
 
 
 async def run_analysis(
@@ -149,7 +201,15 @@ async def run_analysis(
             raise AppError("VIDEO_NOT_FOUND", "视频不存在或已经过期。", 404)
 
         update_stage(session, job, JobStatus.UNDERSTANDING)
-        model_result, _ = await analyze_in_segments(source, video.duration_ms, data_dir, job.id, adapter)
+        model_result, _ = await analyze_in_segments(
+            source,
+            video.duration_ms,
+            data_dir,
+            job.id,
+            adapter,
+            session=session,
+            job=job,
+        )
 
         update_stage(session, job, JobStatus.ANALYZING)
         validated = validate_and_normalize(model_result.payload, video.duration_ms)
@@ -185,6 +245,9 @@ async def run_analysis(
         job.error_detail = None
         job.updated_at = utc_now()
         session.add(job)
+        from app.services.job_progress import set_progress_message
+
+        set_progress_message(session, job, exc.message, level="error")
         session.commit()
     except Exception:
         failed_stage = job.current_stage
@@ -195,6 +258,9 @@ async def run_analysis(
         job.error_detail = None
         job.updated_at = utc_now()
         session.add(job)
+        from app.services.job_progress import set_progress_message
+
+        set_progress_message(session, job, "视频分析失败，请重试。", level="error")
         session.commit()
 
 
