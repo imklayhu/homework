@@ -55,7 +55,7 @@ class TrackingAdapter:
 
 def test_progress_service_persists_snapshot_and_limits_recent_logs(tmp_path: Path) -> None:
     session, job = session_with_job(tmp_path)
-    initialize_progress(session, job, 65_000, 30_000)
+    initialize_progress(session, job, 3)
     assert (job.progress_current, job.progress_total, job.progress_percent) == (0, 3, 0)
     set_progress_message(session, job, "正在生成第 1/3 个分析片段")
     complete_segment(session, job, 1)
@@ -94,6 +94,35 @@ async def test_long_video_uses_model_friendly_segment_duration(tmp_path: Path, m
 
     assert durations == [30.0, 30.0, 30.0, 30.0, 10.0]
     assert adapter.calls == 5
+
+
+@pytest.mark.asyncio
+async def test_tiny_tail_is_merged_into_previous_segment(tmp_path: Path, monkeypatch) -> None:
+    raw = json.loads(MODEL_RESPONSE.read_text())
+    result = ModelAnalysisResult(
+        AnalysisPayload.model_validate(json.loads(raw["choices"][0]["message"]["content"])),
+        raw["usage"],
+        "qwen3-vl-flash",
+        "qwen-video-v1",
+    )
+    adapter = TrackingAdapter(result=result)
+    ranges: list[tuple[float, float]] = []
+
+    def fake_proxy(source, destination, start_seconds=0, duration_seconds=None):
+        ranges.append((start_seconds, duration_seconds))
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(b"proxy")
+        return destination
+
+    monkeypatch.setattr("app.services.analysis.create_analysis_proxy", fake_proxy)
+    source = tmp_path / "source.mp4"
+    source.write_bytes(b"source")
+
+    await analyze_in_segments(source, 420_350, tmp_path, "job", adapter)
+
+    assert len(ranges) == 14
+    assert ranges[-1] == (390.0, 30.35)
+    assert adapter.calls == 14
 
 
 def session_with_job(tmp_path: Path) -> tuple[Session, AnalysisJob]:

@@ -35,10 +35,9 @@ def append_job_log(
 def initialize_progress(
     session: Session,
     job: AnalysisJob,
-    duration_ms: int,
-    segment_ms: int,
+    total_segments: int,
 ) -> None:
-    total = max(1, (duration_ms + segment_ms - 1) // segment_ms)
+    total = max(1, total_segments)
     job.progress_current = 0
     job.progress_total = total
     job.progress_percent = 0

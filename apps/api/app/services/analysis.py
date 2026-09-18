@@ -84,6 +84,22 @@ def video_data_url(path: Path, mime_type: str) -> str:
     return f"data:{mime_type};base64,{encoded}"
 
 
+def build_segment_ranges(
+    duration_ms: int,
+    segment_ms: int = 30_000,
+    min_tail_ms: int = 3_000,
+) -> list[tuple[int, int]]:
+    ranges = [
+        (start_ms, min(segment_ms, duration_ms - start_ms))
+        for start_ms in range(0, duration_ms, segment_ms)
+    ]
+    if len(ranges) > 1 and ranges[-1][1] < min_tail_ms:
+        previous_start, previous_length = ranges[-2]
+        ranges[-2] = (previous_start, previous_length + ranges[-1][1])
+        ranges.pop()
+    return ranges
+
+
 def update_stage(session: Session, job: AnalysisJob, status: JobStatus) -> None:
     job.status = status.value
     job.current_stage = status.value
@@ -106,12 +122,13 @@ async def analyze_in_segments(
     # ingest reliably. A three-minute proxy is ~9 MB (12+ MB after base64)
     # for ordinary lecture video and repeatedly times out upstream.
     segment_ms = 30_000
+    segment_ranges = build_segment_ranges(duration_ms, segment_ms)
     results: list[ModelAnalysisResult] = []
     proxies: list[Path] = []
     if session is not None and job is not None:
         from app.services.job_progress import initialize_progress
 
-        initialize_progress(session, job, duration_ms, segment_ms)
+        initialize_progress(session, job, len(segment_ranges))
 
     async def on_progress(level: str, message: str) -> None:
         if session is not None and job is not None:
@@ -120,8 +137,7 @@ async def analyze_in_segments(
             set_progress_message(session, job, message, level=level)
 
     try:
-        for index, start_ms in enumerate(range(0, duration_ms, segment_ms)):
-            length_ms = min(segment_ms, duration_ms - start_ms)
+        for index, (start_ms, length_ms) in enumerate(segment_ranges):
             proxy = data_dir / "tmp" / f"analysis-{job_id}-{index}-{uuid4().hex}.mp4"
             proxies.append(proxy)
             if session is not None and job is not None:
@@ -163,7 +179,7 @@ async def analyze_in_segments(
         chapters = []
         insights = []
         for index, result in enumerate(results):
-            offset = index * segment_ms
+            offset = segment_ranges[index][0]
             chapters.extend(item.model_copy(update={"id": f"{item.id}-s{index}" if len(results) > 1 else item.id, "start_ms": item.start_ms + offset, "end_ms": item.end_ms + offset}) for item in result.payload.chapters)
             insights.extend(item.model_copy(update={"id": f"{item.id}-s{index}" if len(results) > 1 else item.id, "start_ms": item.start_ms + offset, "end_ms": item.end_ms + offset}) for item in result.payload.insights)
         chapters = sorted(chapters, key=lambda item: item.start_ms)[:12]
