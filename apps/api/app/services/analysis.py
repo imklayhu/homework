@@ -90,7 +90,10 @@ async def analyze_in_segments(
     job_id: str,
     adapter: AnalysisAdapter,
 ) -> tuple[ModelAnalysisResult, Path]:
-    segment_ms = 180_000
+    # Keep inline base64 video requests small enough for model gateways to
+    # ingest reliably. A three-minute proxy is ~9 MB (12+ MB after base64)
+    # for ordinary lecture video and repeatedly times out upstream.
+    segment_ms = 60_000
     results: list[ModelAnalysisResult] = []
     proxies: list[Path] = []
     try:

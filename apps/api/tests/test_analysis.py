@@ -8,7 +8,7 @@ from sqlmodel.pool import StaticPool
 from app.errors import AppError
 from app.models import AnalysisJob, AnalysisResult, Video
 from app.schemas import JobStatus
-from app.services.analysis import FallbackAnalysisAdapter, run_analysis
+from app.services.analysis import FallbackAnalysisAdapter, analyze_in_segments, run_analysis
 from app.services.bailian import ModelAnalysisResult
 from app.schemas import AnalysisPayload
 
@@ -44,6 +44,34 @@ class TrackingAdapter:
             raise self.error
         assert self.result is not None
         return self.result
+
+
+@pytest.mark.asyncio
+async def test_long_video_uses_model_friendly_segment_duration(tmp_path: Path, monkeypatch) -> None:
+    raw = json.loads(MODEL_RESPONSE.read_text())
+    result = ModelAnalysisResult(
+        AnalysisPayload.model_validate(json.loads(raw["choices"][0]["message"]["content"])),
+        raw["usage"],
+        "qwen3-vl-flash",
+        "qwen-video-v1",
+    )
+    adapter = TrackingAdapter(result=result)
+    durations: list[float] = []
+
+    def fake_proxy(source, destination, start_seconds=0, duration_seconds=None):
+        durations.append(duration_seconds)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(b"proxy")
+        return destination
+
+    monkeypatch.setattr("app.services.analysis.create_analysis_proxy", fake_proxy)
+    source = tmp_path / "source.mp4"
+    source.write_bytes(b"source")
+
+    await analyze_in_segments(source, 130_000, tmp_path, "job", adapter)
+
+    assert durations == [60.0, 60.0, 10.0]
+    assert adapter.calls == 3
 
 
 def session_with_job(tmp_path: Path) -> tuple[Session, AnalysisJob]:
