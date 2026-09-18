@@ -36,6 +36,17 @@ def test_validator_normalizes_insight_without_mutating_input() -> None:
     assert result.payload.insights[0].start_ms == 0
 
 
+def test_validator_expands_short_insight_before_padding() -> None:
+    data = payload().model_dump()
+    data["insights"][0]["start_ms"] = 0
+    data["insights"][0]["end_ms"] = 4_000
+
+    result = validate_and_normalize(AnalysisPayload.model_validate(data), duration_ms=30_000)
+
+    assert result.payload.insights[0].start_ms == 0
+    assert result.payload.insights[0].end_ms == 6_000
+
+
 def test_validator_rejects_duplicate_ids() -> None:
     data = payload().model_dump()
     data["insights"].append(data["insights"][0])
@@ -43,7 +54,7 @@ def test_validator_rejects_duplicate_ids() -> None:
         validate_and_normalize(AnalysisPayload.model_validate(data), duration_ms=10_000)
 
 
-@pytest.mark.parametrize("start_ms,end_ms", [(1_000, 4_000), (1_000, 125_000)])
+@pytest.mark.parametrize("start_ms,end_ms", [(1_000, 125_000)])
 def test_validator_rejects_insights_outside_remix_duration_bounds(
     start_ms: int, end_ms: int
 ) -> None:
