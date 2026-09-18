@@ -1,6 +1,10 @@
 import pytest
 from pydantic import ValidationError
 
+from sqlmodel import SQLModel, Session, create_engine, select
+from sqlmodel.pool import StaticPool
+
+from app.models import AnalysisJob, AnalysisJobLog, Video
 from app.schemas import AnalysisPayload, Insight, JobStatus
 
 
@@ -42,3 +46,26 @@ def test_analysis_payload_requires_chapters_and_insights() -> None:
 
 def test_job_status_is_constrained() -> None:
     assert JobStatus.COMPLETED.value == "completed"
+
+
+def test_analysis_job_persists_progress_and_logs() -> None:
+    engine = create_engine("sqlite://", poolclass=StaticPool, connect_args={"check_same_thread": False})
+    SQLModel.metadata.create_all(engine)
+    with Session(engine) as session:
+        video = Video(id="video", original_name="lesson.mp4", storage_key="lesson.mp4", duration_ms=60_000, size_bytes=1, mime_type="video/mp4")
+        job = AnalysisJob(video_id=video.id)
+        log = AnalysisJobLog(job_id=job.id, stage="understanding", message="正在理解第 1/3 个片段")
+        job.progress_current = 1
+        job.progress_total = 3
+        job.progress_percent = 33
+        session.add(video)
+        session.add(job)
+        session.add(log)
+        session.commit()
+
+        stored_job = session.get(AnalysisJob, job.id)
+        stored_log = session.get(AnalysisJobLog, log.id)
+        assert stored_job is not None
+        assert (stored_job.progress_current, stored_job.progress_total, stored_job.progress_percent) == (1, 3, 33)
+        assert stored_log is not None
+        assert stored_log.message == "正在理解第 1/3 个片段"

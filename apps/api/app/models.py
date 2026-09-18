@@ -38,8 +38,21 @@ class AnalysisJob(SQLModel, table=True):
     error_code: str | None = None
     error_message: str | None = None
     error_detail: str | None = None
+    progress_current: int = 0
+    progress_total: int = 0
+    progress_percent: int = 0
+    progress_message: str | None = None
     created_at: datetime = Field(default_factory=utc_now)
     updated_at: datetime = Field(default_factory=utc_now)
+
+
+class AnalysisJobLog(SQLModel, table=True):
+    id: str = Field(default_factory=new_id, primary_key=True)
+    job_id: str = Field(foreign_key="analysisjob.id", index=True)
+    stage: str
+    level: str = "info"
+    message: str
+    created_at: datetime = Field(default_factory=utc_now, index=True)
 
 
 class AnalysisResult(SQLModel, table=True):
