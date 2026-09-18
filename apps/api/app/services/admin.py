@@ -6,11 +6,11 @@ ITERATIONS = 210_000
 def hash_password(password: str) -> str:
     salt = secrets.token_bytes(16)
     digest = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, ITERATIONS)
-    return f"pbkdf2${ITERATIONS}${base64.urlsafe_b64encode(salt).decode()}${base64.urlsafe_b64encode(digest).decode()}"
+    return f"pbkdf2|{ITERATIONS}|{base64.urlsafe_b64encode(salt).decode()}|{base64.urlsafe_b64encode(digest).decode()}"
 
 def verify_password(password: str, encoded: str) -> bool:
     try:
-        _, rounds, salt, digest = encoded.split("$")
+        _, rounds, salt, digest = encoded.split("|")
         actual = hashlib.pbkdf2_hmac("sha256", password.encode(), base64.urlsafe_b64decode(salt), int(rounds))
         return hmac.compare_digest(actual, base64.urlsafe_b64decode(digest))
     except (ValueError, TypeError):
