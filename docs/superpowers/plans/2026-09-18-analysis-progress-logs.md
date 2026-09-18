@@ -13,7 +13,7 @@
 ## 文件结构
 
 - Modify `apps/api/app/models.py`：新增 Job 进度字段和 `AnalysisJobLog`。
-- Modify `apps/api/app/db.py`：为已有 SQLite 数据库执行幂等轻量迁移。
+- Modify `apps/api/app/db.py`：保持新表初始化逻辑；本次开发使用空数据库，不实现旧数据库兼容迁移。
 - Modify `apps/api/app/schemas.py`：定义日志响应及扩展 Job 响应。
 - Create `apps/api/app/services/job_progress.py`：集中计算、持久化进度和脱敏日志。
 - Modify `apps/api/app/services/analysis.py`：在长视频片段生命周期调用进度服务。
@@ -26,7 +26,7 @@
 - Modify `apps/web/src/app/globals.css`：进度条和日志面板样式。
 - Modify `apps/web/tests/JobProgress.test.tsx`：前端状态测试。
 
-### Task 1: 持久化数据模型与兼容迁移
+### Task 1: 持久化数据模型与空库初始化
 
 **Files:**
 - Modify: `apps/api/app/models.py`
@@ -72,7 +72,7 @@ class AnalysisJobLog(SQLModel, table=True):
     created_at: datetime = Field(default_factory=utc_now, index=True)
 ```
 
-在 `init_db()` 的 `create_all()` 后，通过 SQLite `PRAGMA table_info(analysisjob)` 检查字段并逐条执行 `ALTER TABLE ... ADD COLUMN`。迁移必须幂等，默认值分别为 `0, 0, 0, NULL`。
+保持 `init_db()` 使用 `SQLModel.metadata.create_all(engine)` 初始化新表。本次开发允许清空现有本地数据库，因此不增加 `ALTER TABLE` 兼容迁移逻辑；执行本地验证前删除明确目标 `apps/api/data/app.db`（如存在），再由应用创建全新数据库。不得删除 `data/` 目录中的视频文件，除非测试夹具明确要求。
 
 - [ ] **Step 4: 运行模型测试**
 
@@ -308,9 +308,12 @@ git add apps/api apps/web
 git commit -m "fix: finalize analysis progress experience"
 ```
 
-## 非目标与部署约束
+## 数据清理与非目标
 
+- 本次开发允许清空本地 `apps/api/data/app.db` 中的全部历史任务、分析结果和埋点数据；清理前只确认目标文件为该 SQLite 数据库。
+- 不清理远程 Lighthouse 或 Ubuntu 的数据，不执行远程部署。
+- 新数据库从空库初始化，验收数据只来自本轮测试。
 - 不引入 SSE、WebSocket、Redis 或外部队列。
 - 不在页面暴露供应商、Base URL、请求体、响应体、密钥和堆栈。
-- 不删除历史日志；API 只返回最近 20 条。
+- 日志在单次任务生命周期内只追加；API 只返回最近 20 条。
 - 本计划完成后不部署 Lighthouse 或 Ubuntu，等待用户明确授权。
