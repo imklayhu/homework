@@ -25,5 +25,15 @@ test("uploads a supported video", async () => {
 
   await userEvent.upload(screen.getByLabelText("选择视频"), file);
 
-  expect(upload).toHaveBeenCalledWith(file);
+  expect(upload).toHaveBeenCalledWith(file, expect.any(Function));
+});
+
+test("shows confirmed chunk upload progress", async () => {
+  const upload = vi.fn(async (_file: File, onProgress: (value: {percent:number;uploadedChunks:number;totalChunks:number}) => void) => {
+    onProgress({ percent: 48, uploadedChunks: 6, totalChunks: 13 });
+    await new Promise(() => undefined);
+  });
+  render(<UploadPanel onUpload={upload} />);
+  await userEvent.upload(screen.getByLabelText("选择视频"), new File(["video"], "lesson.mp4", { type: "video/mp4" }));
+  expect(await screen.findByText("正在上传 48%（6/13）")).toBeInTheDocument();
 });

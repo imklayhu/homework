@@ -2,15 +2,17 @@
 
 import { useRef, useState } from "react";
 import { FileVideo, Upload, X } from "lucide-react";
+import type { UploadProgress } from "@/lib/api";
 
 
 const ALLOWED_TYPES = new Set(["video/mp4", "video/quicktime", "video/webm"]);
 
-export function UploadPanel({ onUpload }: { onUpload: (file: File) => Promise<void> | void }) {
+export function UploadPanel({ onUpload }: { onUpload: (file: File, onProgress: (progress: UploadProgress) => void) => Promise<void> | void }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
+  const [progress, setProgress] = useState<UploadProgress | null>(null);
 
   async function selectFile(file?: File) {
     if (!file) return;
@@ -24,9 +26,10 @@ export function UploadPanel({ onUpload }: { onUpload: (file: File) => Promise<vo
       return;
     }
     setFileName(file.name);
+    setProgress(null);
     setUploading(true);
     try {
-      await onUpload(file);
+      await onUpload(file, setProgress);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "上传失败，请重试。");
     } finally {
@@ -57,7 +60,7 @@ export function UploadPanel({ onUpload }: { onUpload: (file: File) => Promise<vo
         />
         <div className="upload-icon"><FileVideo size={28} strokeWidth={1.7} /></div>
         <div>
-          <strong>{uploading ? "正在上传视频..." : fileName ?? "拖入课程视频"}</strong>
+          <strong>{uploading ? (progress ? `正在上传 ${progress.percent}%（${progress.uploadedChunks}/${progress.totalChunks}）` : "正在准备上传...") : fileName ?? "拖入课程视频"}</strong>
           <span>MP4、MOV、WebM · 3–15 分钟 · 最大 300 MB</span>
         </div>
         <button className="primary-button" type="button" disabled={uploading} onClick={() => inputRef.current?.click()}>

@@ -12,8 +12,8 @@ export default function Home() {
   const router = useRouter();
   return <main className="home-shell">
     <header className="topbar"><Link className="brand" href="/"><span className="brand-mark"><Clapperboard size={19} /></span><span>Framewise</span></Link><span className="product-tag">AI VIDEO STUDIO</span></header>
-    <UploadPanel onUpload={async (file) => {
-      const response = await uploadVideo(file);
+    <UploadPanel onUpload={async (file, onProgress) => {
+      const response = await uploadVideo(file, onProgress);
       router.push(`/jobs/${response.job_id}`);
     }} />
     <section className="workflow-band" aria-label="处理流程">

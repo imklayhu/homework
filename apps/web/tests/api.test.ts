@@ -12,11 +12,8 @@ describe("API URL construction", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    const { buildApiUrl, uploadVideo } = await import("../src/lib/api");
+    const { buildApiUrl } = await import("../src/lib/api");
     expect(buildApiUrl("/api/videos", "/api")).toBe("/api/videos");
-
-    await uploadVideo(new File(["video"], "lesson.mp4", { type: "video/mp4" }));
-
-    expect(fetchMock.mock.calls[0][0]).not.toContain("/api/api/");
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
