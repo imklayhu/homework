@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import json
 from pathlib import Path
@@ -97,7 +98,16 @@ async def analyze_in_segments(
             length_ms = min(segment_ms, duration_ms - start_ms)
             proxy = data_dir / "tmp" / f"analysis-{job_id}-{index}-{uuid4().hex}.mp4"
             proxies.append(proxy)
-            create_analysis_proxy(source, proxy, start_ms / 1000, length_ms / 1000)
+            # ffmpeg is a blocking subprocess; keep it off the event loop so
+            # health checks, job polling, and other requests remain responsive
+            # while long videos are being transcoded.
+            await asyncio.to_thread(
+                create_analysis_proxy,
+                source,
+                proxy,
+                start_ms / 1000,
+                length_ms / 1000,
+            )
             results.append(await adapter.analyze(video_data_url(proxy, "video/mp4"), length_ms))
 
         chapters = []
