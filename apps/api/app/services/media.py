@@ -19,6 +19,37 @@ class MediaMetadata(BaseModel):
     has_audio: bool
 
 
+def create_analysis_proxy(
+    source: Path,
+    destination: Path,
+    start_seconds: float = 0,
+    duration_seconds: float | None = None,
+) -> Path:
+    """Create a small, full-duration proxy suitable for a multimodal request."""
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    command = ["ffmpeg", "-y"]
+    if start_seconds > 0:
+        command += ["-ss", f"{start_seconds:.3f}"]
+    command += ["-i", str(source)]
+    if duration_seconds is not None:
+        command += ["-t", f"{duration_seconds:.3f}"]
+    command += [
+        "-vf", "scale=-2:480,fps=0.5",
+        "-c:v", "libx264", "-preset", "veryfast", "-b:v", "350k",
+        "-c:a", "aac", "-b:a", "64k", "-movflags", "+faststart",
+        str(destination),
+    ]
+    try:
+        subprocess.run(command, capture_output=True, text=True, timeout=180, check=True)
+    except subprocess.TimeoutExpired as exc:
+        destination.unlink(missing_ok=True)
+        raise AppError("MEDIA_PREPROCESSING_FAILED", "视频预处理超时，请重试。", 500) from exc
+    except subprocess.CalledProcessError as exc:
+        destination.unlink(missing_ok=True)
+        raise AppError("MEDIA_PREPROCESSING_FAILED", "视频预处理失败，请检查文件是否完整。", 422) from exc
+    return destination
+
+
 def probe_video(path: Path) -> MediaMetadata:
     command = [
         "ffprobe",

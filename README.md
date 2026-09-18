@@ -29,6 +29,7 @@ flowchart LR
 - `apps/web`：Next.js 16、React 19、TypeScript、Vitest、Playwright；
 - `apps/api`：FastAPI、SQLModel/SQLite、Pydantic、httpx；
 - 模型：主通道 `qwen3-vl-flash`，端点异常时回退 `qwen3.8-flash`；
+- 长视频：按约 3 分钟分段生成 480p/0.5 FPS 临时代理，逐段理解后合并回原视频时间轴；原视频仍用于证据回放和 Remix；
 - 媒体：ffprobe 预检，FFmpeg 使用参数数组裁剪并标准化为 H.264/AAC；
 - 持久化：任务 URL 可在刷新后恢复，不依赖浏览器内存。
 

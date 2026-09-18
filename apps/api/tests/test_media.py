@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from app.errors import AppError
-from app.services.media import probe_video, validate_media
+from app.services.media import create_analysis_proxy, probe_video, validate_media
 
 
 FIXTURE = Path(__file__).parent / "fixtures" / "sample.mp4"
@@ -35,3 +35,20 @@ def test_validate_media_rejects_duration_outside_limits() -> None:
 
     with pytest.raises(AppError, match="VIDEO_TOO_LONG"):
         validate_media(Path("lesson.mp4"), 10, 11_000, 100, 1, 10)
+
+
+def test_create_analysis_proxy_preserves_duration_and_writes_mp4(tmp_path: Path) -> None:
+    proxy = create_analysis_proxy(FIXTURE, tmp_path / "proxy.mp4")
+
+    assert proxy == tmp_path / "proxy.mp4"
+    assert proxy.exists()
+    assert proxy.stat().st_size < 2 * 1024 * 1024
+    metadata = probe_video(proxy)
+    assert abs(metadata.duration_ms - probe_video(FIXTURE).duration_ms) <= 2_000
+    assert metadata.video_codec == "h264"
+
+
+def test_create_analysis_proxy_can_render_a_time_window(tmp_path: Path) -> None:
+    proxy = create_analysis_proxy(FIXTURE, tmp_path / "segment.mp4", 1, 2)
+    metadata = probe_video(proxy)
+    assert 1_500 <= metadata.duration_ms <= 2_500

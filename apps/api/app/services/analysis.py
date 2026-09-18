@@ -2,6 +2,7 @@ import base64
 import json
 from pathlib import Path
 from typing import Protocol
+from uuid import uuid4
 
 from sqlmodel import Session, select
 
@@ -9,10 +10,11 @@ from app.config import Settings
 from app.db import engine
 from app.errors import AppError
 from app.models import AnalysisJob, AnalysisResult, Video, utc_now
-from app.schemas import JobStatus
+from app.schemas import AnalysisPayload, JobStatus
 from app.services.bailian import ModelAnalysisResult
 from app.services.bailian import BailianVideoAdapter
 from app.services.cost import Pricing, estimate_cost
+from app.services.media import create_analysis_proxy
 from app.services.validator import validate_and_normalize
 
 
@@ -77,6 +79,40 @@ def update_stage(session: Session, job: AnalysisJob, status: JobStatus) -> None:
     session.commit()
 
 
+async def analyze_in_segments(
+    source: Path,
+    duration_ms: int,
+    data_dir: Path,
+    job_id: str,
+    adapter: AnalysisAdapter,
+) -> tuple[ModelAnalysisResult, Path]:
+    segment_ms = 180_000
+    results: list[ModelAnalysisResult] = []
+    proxies: list[Path] = []
+    try:
+        for index, start_ms in enumerate(range(0, duration_ms, segment_ms)):
+            length_ms = min(segment_ms, duration_ms - start_ms)
+            proxy = data_dir / "tmp" / f"analysis-{job_id}-{index}-{uuid4().hex}.mp4"
+            proxies.append(proxy)
+            create_analysis_proxy(source, proxy, start_ms / 1000, length_ms / 1000)
+            results.append(await adapter.analyze(video_data_url(proxy, "video/mp4"), length_ms))
+
+        chapters = []
+        insights = []
+        for index, result in enumerate(results):
+            offset = index * segment_ms
+            chapters.extend(item.model_copy(update={"id": f"{item.id}-s{index}" if len(results) > 1 else item.id, "start_ms": item.start_ms + offset, "end_ms": item.end_ms + offset}) for item in result.payload.chapters)
+            insights.extend(item.model_copy(update={"id": f"{item.id}-s{index}" if len(results) > 1 else item.id, "start_ms": item.start_ms + offset, "end_ms": item.end_ms + offset}) for item in result.payload.insights)
+        chapters = sorted(chapters, key=lambda item: item.start_ms)[:12]
+        insights = sorted(insights, key=lambda item: (-item.confidence, item.start_ms))[:12]
+        merged = AnalysisPayload(summary="\n".join(result.payload.summary for result in results), chapters=chapters, insights=insights)
+        usage = {key: sum(item.usage.get(key, 0) for item in results if isinstance(item.usage.get(key), int)) for key in ("prompt_tokens", "completion_tokens")}
+        return ModelAnalysisResult(merged, usage, results[0].model, results[0].prompt_version), proxies[0]
+    finally:
+        for proxy in proxies:
+            proxy.unlink(missing_ok=True)
+
+
 async def run_analysis(
     job_id: str,
     session: Session,
@@ -97,9 +133,7 @@ async def run_analysis(
             raise AppError("VIDEO_NOT_FOUND", "视频不存在或已经过期。", 404)
 
         update_stage(session, job, JobStatus.UNDERSTANDING)
-        model_result = await adapter.analyze(
-            video_data_url(source, video.mime_type), video.duration_ms
-        )
+        model_result, _ = await analyze_in_segments(source, video.duration_ms, data_dir, job.id, adapter)
 
         update_stage(session, job, JobStatus.ANALYZING)
         validated = validate_and_normalize(model_result.payload, video.duration_ms)
