@@ -1,9 +1,13 @@
 FROM python:3.12-slim
-RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg curl && rm -rf /var/lib/apt/lists/*
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+RUN sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list.d/debian.sources \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg curl \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-dev
+ENV PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple \
+    UV_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
+RUN pip install --no-cache-dir uv && uv sync --frozen --no-dev
 COPY app ./app
 ENV PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1
 EXPOSE 8000

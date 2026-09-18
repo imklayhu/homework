@@ -5,7 +5,10 @@ from pydantic import AliasChoices, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
+_config_path = Path(__file__).resolve()
+# In the source tree the project root is three levels above this file; the
+# container copies the API package to /app, where that parent does not exist.
+PROJECT_ROOT = Path("/app") if _config_path.is_relative_to(Path("/app")) else _config_path.parents[3]
 
 
 class Settings(BaseSettings):
