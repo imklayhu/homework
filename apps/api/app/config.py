@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     transcription_model: str = "qwen3-asr-flash-2026-02-10"
     enable_asr: bool = False
     demo_mode: bool = False
+    admin_username: str = "admin"
+    admin_password: SecretStr | None = None
+    admin_session_secret: SecretStr = SecretStr("change-me-in-production")
 
     max_upload_bytes: int = 300 * 1024 * 1024
     min_duration_seconds: int = 180

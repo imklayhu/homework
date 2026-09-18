@@ -1,0 +1,28 @@
+services:
+  api:
+    build: ./apps/api
+    env_file: .env
+    environment:
+      DATABASE_URL: sqlite:////app/data/app.db
+      DATA_DIR: /app/data
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://192.168.3.16:3015}
+    volumes:
+      - ./data:/app/data
+    expose: ["8000"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+  web:
+    build:
+      context: ./apps/web
+      args:
+        NEXT_PUBLIC_API_BASE_URL: /api
+    ports:
+      - "${FRAMEWISE_BIND_IP:-0.0.0.0}:${FRAMEWISE_PORT:-3015}:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped

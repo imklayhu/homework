@@ -65,3 +65,11 @@ class RemixJob(SQLModel, table=True):
     error_detail: str | None = None
     created_at: datetime = Field(default_factory=utc_now)
     updated_at: datetime = Field(default_factory=utc_now)
+
+
+class AnalyticsEvent(SQLModel, table=True):
+    id: str = Field(default_factory=new_id, primary_key=True)
+    name: str = Field(index=True)
+    properties_json: str = "{}"
+    session_id: str | None = Field(default=None, index=True)
+    created_at: datetime = Field(default_factory=utc_now, index=True)
