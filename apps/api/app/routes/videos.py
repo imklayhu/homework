@@ -46,8 +46,10 @@ def register_uploaded_video(
         session.refresh(job)
         record_event(session, "video_upload_completed", {"video_id": video_id, "job_id": job.id, "size_bytes": video.size_bytes})
         session.commit()
-        if settings.on_demand_api_key is not None and settings.on_demand_base_url:
-            background_tasks.add_task(execute_analysis_job, job.id, settings)
+        # Always enqueue the job. If model credentials are missing, the executor
+        # persists a clear MODEL_NOT_CONFIGURED failure instead of leaving the
+        # job permanently stuck in uploaded.
+        background_tasks.add_task(execute_analysis_job, job.id, settings)
         return UploadAccepted(video_id=video_id, job_id=job.id, status=JobStatus.UPLOADED)
     except Exception:
         session.rollback()

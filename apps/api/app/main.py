@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
 
@@ -13,13 +14,25 @@ from app.routes.remixes import router as remixes_router
 from app.routes.videos import router as videos_router
 from app.routes.admin import router as admin_router
 from app.routes.uploads import router as uploads_router
+from app.db import engine
+from app.models import AnalysisJob
+from app.schemas import JobStatus
+from app.services.analysis import execute_analysis_job
+from sqlmodel import Session, select
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-    get_settings().ensure_directories()
+    settings = get_settings()
+    settings.ensure_directories()
     init_db()
+    # Recover jobs left in a transient state by a process/container restart.
+    with Session(engine) as session:
+        pending = session.exec(select(AnalysisJob).where(AnalysisJob.status.in_((JobStatus.UPLOADED.value, JobStatus.PREPROCESSING.value, JobStatus.UNDERSTANDING.value, JobStatus.ANALYZING.value)))).all()
+    recovery_tasks = [asyncio.create_task(execute_analysis_job(job.id, settings)) for job in pending]
     yield
+    for task in recovery_tasks:
+        task.cancel()
 
 
 settings = get_settings()
