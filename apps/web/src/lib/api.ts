@@ -1,7 +1,11 @@
 import type { AnalysisJob, AnalysisPayload, RemixJob } from "./types";
 
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+const configuredApiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+export const API_BASE_URL = configuredApiBaseUrl.replace(/\/api\/?$/, "");
+
+export const buildApiUrl = (path: string, baseUrl = API_BASE_URL) =>
+  `${baseUrl.replace(/\/api\/?$/, "")}${path}`;
 
 export class ApiError extends Error {
   constructor(public code: string, message: string, public status: number) {
@@ -10,7 +14,7 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, init);
+  const response = await fetch(buildApiUrl(path), init);
   if (!response.ok) {
     const body = await response.json().catch(() => ({ code: "REQUEST_FAILED", message: "请求失败，请重试。" }));
     throw new ApiError(body.code, body.message, response.status);
