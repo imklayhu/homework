@@ -70,8 +70,8 @@ async def test_long_video_uses_model_friendly_segment_duration(tmp_path: Path, m
 
     await analyze_in_segments(source, 130_000, tmp_path, "job", adapter)
 
-    assert durations == [60.0, 60.0, 10.0]
-    assert adapter.calls == 3
+    assert durations == [30.0, 30.0, 30.0, 30.0, 10.0]
+    assert adapter.calls == 5
 
 
 def session_with_job(tmp_path: Path) -> tuple[Session, AnalysisJob]:
