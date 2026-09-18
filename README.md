@@ -57,9 +57,11 @@ BAILIAN_BASE_URL=
 VIDEO_UNDERSTANDING_MODEL=qwen3-vl-flash
 WORKSPACE_VIDEO_MODEL=qwen3.8-flash
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+NEXT_PUBLIC_DEMO_ADMIN_USERNAME=admin
+NEXT_PUBLIC_DEMO_ADMIN_PASSWORD=
 ```
 
-真实 `.env` 已被 Git 忽略。应用和日志不输出密钥或 Base URL。
+真实 `.env` 已被 Git 忽略。`NEXT_PUBLIC_DEMO_ADMIN_*` 仅用于面试演示页面显示，必须与低权限管理员账号一致；模型 API Key、Base URL 和会话密钥不能使用 `NEXT_PUBLIC_` 前缀。应用和日志不输出密钥或 Base URL。
 
 ## 验证
 

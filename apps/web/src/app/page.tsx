@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Clapperboard, ScanSearch, Scissors } from "lucide-react";
+import { ArrowUpRight, Clapperboard, ScanSearch, Scissors } from "lucide-react";
 
 import { UploadPanel } from "@/components/UploadPanel";
 import { uploadVideo } from "@/lib/api";
@@ -11,7 +11,7 @@ import { uploadVideo } from "@/lib/api";
 export default function Home() {
   const router = useRouter();
   return <main className="home-shell">
-    <header className="topbar"><Link className="brand" href="/"><span className="brand-mark"><Clapperboard size={19} /></span><span>Framewise</span></Link><span className="product-tag">AI VIDEO STUDIO</span></header>
+    <header className="topbar home-topbar"><Link className="brand" href="/"><span className="brand-mark"><Clapperboard size={19} /></span><span>Framewise</span></Link><nav className="site-nav" aria-label="主导航"><Link href="/">开始体验</Link><Link href="/product" target="_blank" rel="noreferrer">产品方案 <ArrowUpRight size={13} /></Link><Link href="/admin" target="_blank" rel="noreferrer">数据看板 <ArrowUpRight size={13} /></Link></nav><span className="product-tag">AI VIDEO STUDIO</span></header>
     <UploadPanel onUpload={async (file, onProgress) => {
       const response = await uploadVideo(file, onProgress);
       router.push(`/jobs/${response.job_id}`);
