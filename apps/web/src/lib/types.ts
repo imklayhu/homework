@@ -45,6 +45,14 @@ export interface AnalysisPayload {
   insights: Insight[];
 }
 
+export interface AnalysisJobLog {
+  id: string;
+  stage: string;
+  level: "info" | "warning" | "error";
+  message: string;
+  created_at: string;
+}
+
 export interface AnalysisJob {
   id: string;
   video_id: string;
@@ -54,6 +62,11 @@ export interface AnalysisJob {
   error_message: string | null;
   provider_usage: Record<string, unknown> | null;
   estimated_cost: number | null;
+  progress_current: number;
+  progress_total: number;
+  progress_percent: number;
+  progress_message: string | null;
+  logs: AnalysisJobLog[];
   created_at: string;
   updated_at: string;
 }

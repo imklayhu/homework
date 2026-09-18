@@ -39,5 +39,5 @@ export default function JobPage() {
   }, [refresh]);
 
   if (job?.status === "completed" && result) return <VideoWorkspace videoId={job.video_id} result={result} />;
-  return <main className="processing-shell"><Link className="brand" href="/"><span className="brand-mark">F</span><span>Framewise</span></Link><section className="processing-panel"><span className="eyebrow">ANALYSIS IN PROGRESS</span><h1>正在把视频拆成可验证的知识片段</h1><p>页面可以保持打开，完成后会自动进入分析工作台。</p>{job ? <JobProgress status={job.status} errorMessage={job.error_message} onRetry={job.status === "failed" ? async () => { await retryJob(jobId); setError(null); void refresh(); } : undefined} /> : <div className="loading-line">正在读取任务...</div>}{error && <p className="inline-error">{error}</p>}</section></main>;
+  return <main className="processing-shell"><Link className="brand" href="/"><span className="brand-mark">F</span><span>Framewise</span></Link><section className="processing-panel"><span className="eyebrow">ANALYSIS IN PROGRESS</span><h1>正在把视频拆成可验证的知识片段</h1><p>页面可以保持打开，完成后会自动进入分析工作台。</p>{job ? <JobProgress job={job} onRetry={job.status === "failed" ? async () => { await retryJob(jobId); setError(null); void refresh(); } : undefined} /> : <div className="loading-line">正在读取任务...</div>}{error && <p className="inline-error">{error}</p>}</section></main>;
 }
